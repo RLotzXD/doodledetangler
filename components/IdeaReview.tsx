@@ -2,20 +2,25 @@
 
 import { useState, useRef } from 'react';
 import { Idea, AppAction } from '@/lib/types';
+import { generateIdeasPrompt } from '@/lib/export';
+import ExportPromptModal from './ExportPromptModal';
 
 interface Props {
   ideas: Idea[];
   dispatch: React.Dispatch<AppAction>;
   onGenerateDeck: () => void;
   onBack: () => void;
+  briefText?: string;
+  notesText?: string;
 }
 
-export default function IdeaReview({ ideas, dispatch, onGenerateDeck, onBack }: Props) {
+export default function IdeaReview({ ideas, dispatch, onGenerateDeck, onBack, briefText = '', notesText = '' }: Props) {
   const [newHeadline, setNewHeadline] = useState('');
   const [newSubheader, setNewSubheader] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editHeadline, setEditHeadline] = useState('');
   const [editSubheader, setEditSubheader] = useState('');
+  const [showExportModal, setShowExportModal] = useState(false);
   const dragIndexRef = useRef<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
@@ -196,6 +201,18 @@ export default function IdeaReview({ ideas, dispatch, onGenerateDeck, onBack }: 
       </div>
 
       <button
+        onClick={() => setShowExportModal(true)}
+        disabled={selectedCount === 0}
+        className={`w-full py-3 text-sm font-bold border-2 transition-colors mb-2 ${
+          selectedCount > 0
+            ? 'border-[var(--foreground)] hover:bg-[var(--foreground)] hover:text-[var(--background)]'
+            : 'border-[var(--border)] text-[var(--muted)] cursor-not-allowed'
+        }`}
+      >
+        Export as Agent Prompt
+      </button>
+
+      <button
         onClick={onGenerateDeck}
         disabled={selectedCount === 0}
         className={`w-full py-3 text-sm font-bold border-2 transition-colors ${
@@ -206,6 +223,13 @@ export default function IdeaReview({ ideas, dispatch, onGenerateDeck, onBack }: 
       >
         Generate Deck ({selectedCount} ideas)
       </button>
+
+      {showExportModal && (
+        <ExportPromptModal
+          prompt={generateIdeasPrompt(ideas, briefText, notesText)}
+          onClose={() => setShowExportModal(false)}
+        />
+      )}
     </div>
   );
 }

@@ -1,11 +1,12 @@
 'use client';
 
 import { useReducer, useCallback, useEffect, useState } from 'react';
-import { AppState, AppAction, Idea, SavedDeck } from '@/lib/types';
+import { AppState, AppAction, Idea, Tweet, SavedDeck } from '@/lib/types';
 import { getTemplate } from '@/lib/templates';
 import InputForm from '@/components/InputForm';
 import ProcessingOverlay from '@/components/ProcessingOverlay';
 import IdeaReview from '@/components/IdeaReview';
+import TweetsReview from '@/components/TweetsReview';
 import DeckViewer from '@/components/DeckViewer';
 import SaveLoadBar from '@/components/SaveLoadBar';
 
@@ -18,6 +19,7 @@ const initialState: AppState = {
   outputFormat: 'ideacards',
   templateId: 'generic',
   ideas: [],
+  tweets: [],
   error: null,
   processingPhase: null,
   detectedBrief: null,
@@ -122,6 +124,42 @@ function reducer(state: AppState, action: AppAction): AppState {
         briefText: action.deck.briefText,
         step: 'review',
       };
+    case 'SET_TWEETS':
+      return { ...state, step: 'tweets', tweets: action.tweets, processingPhase: null };
+    case 'TOGGLE_TWEET':
+      return {
+        ...state,
+        tweets: state.tweets.map((t) =>
+          t.id === action.id ? { ...t, selected: !t.selected } : t
+        ),
+      };
+    case 'REMOVE_TWEET':
+      return { ...state, tweets: state.tweets.filter((t) => t.id !== action.id) };
+    case 'ADD_TWEET':
+      return {
+        ...state,
+        tweets: [
+          ...state.tweets,
+          {
+            id: `manual-${++idCounter}`,
+            text: action.text,
+            selected: true,
+          },
+        ],
+      };
+    case 'EDIT_TWEET':
+      return {
+        ...state,
+        tweets: state.tweets.map((t) =>
+          t.id === action.id ? { ...t, text: action.text } : t
+        ),
+      };
+    case 'REORDER_TWEETS': {
+      const tweets = [...state.tweets];
+      const [moved] = tweets.splice(action.fromIndex, 1);
+      tweets.splice(action.toIndex, 0, moved);
+      return { ...state, tweets };
+    }
     default:
       return state;
   }
@@ -138,6 +176,7 @@ function saveToStorage(state: AppState) {
       outputFormat: state.outputFormat,
       templateId: state.templateId,
       ideas: state.ideas,
+      tweets: state.tweets,
       step: state.step === 'processing' ? 'input' : state.step,
       viewMode: state.viewMode,
     };
@@ -181,6 +220,9 @@ export default function Home() {
       if (saved.templateId) dispatch({ type: 'SET_TEMPLATE', templateId: saved.templateId });
       if (saved.ideas && saved.ideas.length > 0) {
         dispatch({ type: 'SET_IDEAS', ideas: saved.ideas });
+      }
+      if (saved.tweets && saved.tweets.length > 0) {
+        dispatch({ type: 'SET_TWEETS', tweets: saved.tweets });
       }
       if (saved.viewMode) dispatch({ type: 'SET_VIEW_MODE', mode: saved.viewMode as 'scroll' | 'horizontal' });
     }
@@ -279,6 +321,82 @@ export default function Home() {
     }
   }, [state.notesText, state.briefText, state.files, state.briefFile]);
 
+  const handleBuildTweets = useCallback(async () => {
+    const totalUploadBytes = state.files.reduce((sum, file) => sum + file.size, 0)
+      + (state.briefFile?.size || 0);
+
+    if (totalUploadBytes > MAX_TOTAL_UPLOAD_BYTES) {
+      const maxMb = (MAX_TOTAL_UPLOAD_BYTES / (1024 * 1024)).toFixed(0);
+      dispatch({
+        type: 'SET_ERROR',
+        error: `Upload too large for hosted deployment. Please keep total files under ${maxMb}MB or upload fewer files.`,
+      });
+      return;
+    }
+
+    dispatch({ type: 'START_PROCESSING' });
+
+    try {
+      const formData = new FormData();
+      formData.append('notesText', state.notesText);
+      formData.append('briefText', state.briefText);
+
+      for (const file of state.files) {
+        formData.append('files', file);
+      }
+
+      if (state.briefFile) {
+        formData.append('briefFile', state.briefFile);
+      }
+
+      dispatch({ type: 'SET_PROCESSING_PHASE', phase: 'uploading' });
+
+      const res = await fetch('/api/tweets', {
+        method: 'POST',
+        body: formData,
+      });
+
+      dispatch({ type: 'SET_PROCESSING_PHASE', phase: 'extracting' });
+
+      const { data, rawText } = await parseApiResponse(res);
+      const payload = data as { tweets?: Array<{ text: string }> } | null;
+
+      if (!res.ok) {
+        dispatch({
+          type: 'SET_ERROR',
+          error:
+            payload?.tweets === undefined
+            ? rawText
+            : `Tweets generation failed (${res.status})`,
+        });
+        return;
+      }
+
+      if (!payload || !Array.isArray(payload.tweets)) {
+        dispatch({
+          type: 'SET_ERROR',
+          error: rawText || 'Unexpected response from tweets API',
+        });
+        return;
+      }
+
+      const tweets: Tweet[] = payload.tweets.map(
+        (tweet: { text: string }) => ({
+          id: `ai-${++idCounter}`,
+          text: tweet.text,
+          selected: true,
+        })
+      );
+
+      dispatch({ type: 'SET_TWEETS', tweets });
+    } catch (err) {
+      dispatch({
+        type: 'SET_ERROR',
+        error: err instanceof Error ? err.message : 'Network error',
+      });
+    }
+  }, [state.notesText, state.briefText, state.files, state.briefFile]);
+
   const handleGenerateDeck = useCallback(() => {
     dispatch({ type: 'GENERATE_DECK' });
   }, []);
@@ -291,7 +409,7 @@ export default function Home() {
   return (
     <main className="min-h-screen">
       {state.step === 'input' && (
-        <InputForm state={state} dispatch={dispatch} onBuildDeck={handleBuildDeck} />
+        <InputForm state={state} dispatch={dispatch} onBuildDeck={handleBuildDeck} onBuildTweets={handleBuildTweets} />
       )}
 
       {state.step === 'processing' && (
@@ -327,9 +445,21 @@ export default function Home() {
             dispatch={dispatch}
             onGenerateDeck={handleGenerateDeck}
             onBack={() => dispatch({ type: 'BACK_TO_INPUT' })}
+            briefText={state.briefText}
+            notesText={state.notesText}
           />
           <SaveLoadBar ideas={state.ideas} templateId={state.templateId} briefText={state.briefText} dispatch={dispatch} />
         </>
+      )}
+
+      {state.step === 'tweets' && (
+        <TweetsReview
+          tweets={state.tweets}
+          dispatch={dispatch}
+          onBack={() => dispatch({ type: 'BACK_TO_INPUT' })}
+          briefText={state.briefText}
+          notesText={state.notesText}
+        />
       )}
 
       {state.step === 'deck' && (
@@ -340,6 +470,8 @@ export default function Home() {
           currentSlide={state.currentSlide}
           viewMode={state.viewMode}
           onBack={() => dispatch({ type: 'BACK_TO_REVIEW' })}
+          briefText={state.briefText}
+          notesText={state.notesText}
         />
       )}
     </main>

@@ -4,6 +4,8 @@ import { useRef, useEffect, useState, useCallback } from 'react';
 import { Idea, BrandTemplate, AppAction } from '@/lib/types';
 import IdeaCard from './IdeaCard';
 import ExportBar from './ExportBar';
+import { generateIdeasPrompt } from '@/lib/export';
+import ExportPromptModal from './ExportPromptModal';
 
 interface Props {
   ideas: Idea[];
@@ -12,12 +14,15 @@ interface Props {
   currentSlide: number;
   viewMode: 'scroll' | 'horizontal';
   onBack: () => void;
+  briefText?: string;
+  notesText?: string;
 }
 
-export default function DeckViewer({ ideas, template, dispatch, currentSlide, viewMode, onBack }: Props) {
+export default function DeckViewer({ ideas, template, dispatch, currentSlide, viewMode, onBack, briefText = '', notesText = '' }: Props) {
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [scale, setScale] = useState(0.5);
   const [editingField, setEditingField] = useState<{ id: string; field: string } | null>(null);
+  const [showExportModal, setShowExportModal] = useState(false);
   const [editValue, setEditValue] = useState('');
 
   useEffect(() => {
@@ -101,7 +106,15 @@ export default function DeckViewer({ ideas, template, dispatch, currentSlide, vi
             </button>
           </div>
         </div>
-        <ExportBar ideas={ideas} template={template} cardRefs={cardRefs} />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowExportModal(true)}
+            className="text-xs border border-[var(--foreground)] px-3 py-1.5 hover:bg-[var(--foreground)] hover:text-[var(--background)] transition-colors"
+          >
+            Export Prompt
+          </button>
+          <ExportBar ideas={ideas} template={template} cardRefs={cardRefs} />
+        </div>
       </div>
 
       {viewMode === 'horizontal' ? (
@@ -222,6 +235,13 @@ export default function DeckViewer({ ideas, template, dispatch, currentSlide, vi
             </div>
           ))}
         </div>
+      )}
+
+      {showExportModal && (
+        <ExportPromptModal
+          prompt={generateIdeasPrompt(ideas, briefText, notesText)}
+          onClose={() => setShowExportModal(false)}
+        />
       )}
     </div>
   );

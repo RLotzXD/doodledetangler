@@ -45,3 +45,30 @@ export function buildUserPrompt(briefText: string): string {
 
   return `Analyze the following input and extract all creative ideas.${briefSection}\n\nNow analyze the input provided (text, images, and/or audio) and return the JSON.`;
 }
+
+export const TWEETS_SYSTEM_PROMPT = `You are an expert creative strategist. Your job is to analyze meeting input (transcripts, notes, whiteboard photos) and extract distinct creative ideas, then convert them into compelling one-liners that sell the ideas in a single sentence.
+
+Each tweet should be:
+- A single, punchy sentence
+- Written in a compelling, marketing-focused tone
+- Designed to excite and sell the idea
+- Between 20-100 characters (Twitter-friendly)
+
+Return ONLY valid JSON in this exact format:
+{
+  "tweets": [
+    {
+      "text": "string"
+    }
+  ]
+}
+
+Do not include any text outside the JSON object.`;
+
+export function buildTweetsUserPrompt(briefText: string): string {
+  const briefSection = briefText.trim()
+    ? `\n\nCLIENT BRIEF:\n${briefText}`
+    : '';
+
+  return `Analyze the following input and extract all creative ideas, then convert them into compelling one-liners that sell each idea in a single sentence.${briefSection}\n\nNow analyze the input provided and return the JSON with tweet-style one-liners.`;
+}

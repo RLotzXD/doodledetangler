@@ -11,9 +11,10 @@ interface Props {
   state: AppState;
   dispatch: React.Dispatch<AppAction>;
   onBuildDeck: () => void;
+  onBuildTweets: () => void;
 }
 
-export default function InputForm({ state, dispatch, onBuildDeck }: Props) {
+export default function InputForm({ state, dispatch, onBuildDeck, onBuildTweets }: Props) {
   const [showHelp, setShowHelp] = useState(false);
   const hasInput = state.files.length > 0 || state.notesText.trim().length > 0;
 
@@ -96,6 +97,18 @@ export default function InputForm({ state, dispatch, onBuildDeck }: Props) {
         }`}
       >
         Build Deck
+      </button>
+
+      <button
+        onClick={onBuildTweets}
+        disabled={!hasInput}
+        className={`w-full py-3 text-sm font-bold border-2 transition-colors mt-2 ${
+          hasInput
+            ? 'border-[var(--foreground)] bg-transparent text-[var(--foreground)] hover:bg-[var(--foreground)] hover:text-[var(--background)]'
+            : 'border-[var(--border)] text-[var(--muted)] cursor-not-allowed'
+        }`}
+      >
+        Ideas in Tweets
       </button>
     </div>
   );

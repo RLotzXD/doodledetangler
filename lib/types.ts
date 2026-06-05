@@ -10,6 +10,12 @@ export interface Idea {
   selected: boolean;
 }
 
+export interface Tweet {
+  id: string;
+  text: string;
+  selected: boolean;
+}
+
 export interface BrandTemplate {
   id: string;
   name: string;
@@ -22,7 +28,7 @@ export interface BrandTemplate {
 
 export type OutputFormat = 'ideacards';
 
-export type AppStep = 'input' | 'processing' | 'review' | 'deck';
+export type AppStep = 'input' | 'processing' | 'review' | 'tweets' | 'deck';
 
 export type ProcessingPhase =
   | 'uploading'
@@ -49,6 +55,7 @@ export interface AppState {
   outputFormat: OutputFormat;
   templateId: string;
   ideas: Idea[];
+  tweets: Tweet[];
   error: string | null;
   processingPhase: ProcessingPhase | null;
   detectedBrief: string | null;
@@ -67,11 +74,17 @@ export type AppAction =
   | { type: 'START_PROCESSING' }
   | { type: 'SET_PROCESSING_PHASE'; phase: ProcessingPhase }
   | { type: 'SET_IDEAS'; ideas: Idea[] }
+  | { type: 'SET_TWEETS'; tweets: Tweet[] }
   | { type: 'TOGGLE_IDEA'; id: string }
   | { type: 'REMOVE_IDEA'; id: string }
   | { type: 'ADD_IDEA'; headline: string; subheader: string }
   | { type: 'EDIT_IDEA'; id: string; headline: string; subheader: string; insight?: string; mechanic?: string; userJourney?: string }
   | { type: 'REORDER_IDEAS'; fromIndex: number; toIndex: number }
+  | { type: 'TOGGLE_TWEET'; id: string }
+  | { type: 'REMOVE_TWEET'; id: string }
+  | { type: 'ADD_TWEET'; text: string }
+  | { type: 'EDIT_TWEET'; id: string; text: string }
+  | { type: 'REORDER_TWEETS'; fromIndex: number; toIndex: number }
   | { type: 'GENERATE_DECK' }
   | { type: 'SET_ERROR'; error: string }
   | { type: 'BACK_TO_INPUT' }
