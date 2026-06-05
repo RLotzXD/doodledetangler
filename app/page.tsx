@@ -3,6 +3,7 @@
 import { useReducer, useCallback, useEffect, useState } from 'react';
 import { AppState, AppAction, Idea, Tweet, SavedDeck } from '@/lib/types';
 import { getTemplate } from '@/lib/templates';
+import { encodeSessionData, decodeSessionData, getSessionUrl, sendToTeams } from '@/lib/session';
 import InputForm from '@/components/InputForm';
 import ProcessingOverlay from '@/components/ProcessingOverlay';
 import IdeaReview from '@/components/IdeaReview';
@@ -25,6 +26,7 @@ const initialState: AppState = {
   detectedBrief: null,
   currentSlide: 0,
   viewMode: 'horizontal',
+  sessionUrl: null,
 };
 
 let idCounter = 0;
@@ -160,6 +162,8 @@ function reducer(state: AppState, action: AppAction): AppState {
       tweets.splice(action.toIndex, 0, moved);
       return { ...state, tweets };
     }
+    case 'SET_SESSION_URL':
+      return { ...state, sessionUrl: action.url };
     default:
       return state;
   }
@@ -232,6 +236,22 @@ export default function Home() {
   useEffect(() => {
     if (hydrated) saveToStorage(state);
   }, [state, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    const params = new URLSearchParams(window.location.search);
+    const sessionParam = params.get('session');
+    if (sessionParam) {
+      const decoded = decodeSessionData(sessionParam);
+      if (decoded) {
+        if (decoded.ideas?.length > 0) dispatch({ type: 'SET_IDEAS', ideas: decoded.ideas });
+        if (decoded.tweets?.length > 0) dispatch({ type: 'SET_TWEETS', tweets: decoded.tweets });
+        if (decoded.briefText) dispatch({ type: 'SET_BRIEF_TEXT', text: decoded.briefText });
+        if (decoded.notesText) dispatch({ type: 'SET_NOTES', text: decoded.notesText });
+        dispatch({ type: 'SET_SESSION_URL', url: window.location.href });
+      }
+    }
+  }, [hydrated]);
 
   const handleBuildDeck = useCallback(async () => {
     const totalUploadBytes = state.files.reduce((sum, file) => sum + file.size, 0)
@@ -313,6 +333,11 @@ export default function Home() {
       );
 
       dispatch({ type: 'SET_IDEAS', ideas });
+
+      const sessionData = encodeSessionData(ideas, state.tweets, state.briefText, state.notesText);
+      const sessionUrl = getSessionUrl(sessionData);
+      dispatch({ type: 'SET_SESSION_URL', url: sessionUrl });
+      await sendToTeams(sessionUrl, true, state.tweets.length > 0);
     } catch (err) {
       dispatch({
         type: 'SET_ERROR',
@@ -389,6 +414,11 @@ export default function Home() {
       );
 
       dispatch({ type: 'SET_TWEETS', tweets });
+
+      const sessionData = encodeSessionData(state.ideas, tweets, state.briefText, state.notesText);
+      const sessionUrl = getSessionUrl(sessionData);
+      dispatch({ type: 'SET_SESSION_URL', url: sessionUrl });
+      await sendToTeams(sessionUrl, state.ideas.length > 0, true);
     } catch (err) {
       dispatch({
         type: 'SET_ERROR',
@@ -447,6 +477,7 @@ export default function Home() {
             onBack={() => dispatch({ type: 'BACK_TO_INPUT' })}
             briefText={state.briefText}
             notesText={state.notesText}
+            sessionUrl={state.sessionUrl}
           />
           <SaveLoadBar ideas={state.ideas} templateId={state.templateId} briefText={state.briefText} dispatch={dispatch} />
         </>
@@ -459,6 +490,7 @@ export default function Home() {
           onBack={() => dispatch({ type: 'BACK_TO_INPUT' })}
           briefText={state.briefText}
           notesText={state.notesText}
+          sessionUrl={state.sessionUrl}
         />
       )}
 

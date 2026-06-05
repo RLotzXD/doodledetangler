@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { Idea, AppAction } from '@/lib/types';
 import { generateIdeasPrompt } from '@/lib/export';
 import ExportPromptModal from './ExportPromptModal';
+import SessionUrlBanner from './SessionUrlBanner';
 
 interface Props {
   ideas: Idea[];
@@ -12,9 +13,10 @@ interface Props {
   onBack: () => void;
   briefText?: string;
   notesText?: string;
+  sessionUrl?: string | null;
 }
 
-export default function IdeaReview({ ideas, dispatch, onGenerateDeck, onBack, briefText = '', notesText = '' }: Props) {
+export default function IdeaReview({ ideas, dispatch, onGenerateDeck, onBack, briefText = '', notesText = '', sessionUrl = null }: Props) {
   const [newHeadline, setNewHeadline] = useState('');
   const [newSubheader, setNewSubheader] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -69,7 +71,9 @@ export default function IdeaReview({ ideas, dispatch, onGenerateDeck, onBack, br
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
+    <div>
+      {sessionUrl && <SessionUrlBanner url={sessionUrl} />}
+      <div className="max-w-3xl mx-auto p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-lg font-bold">Review Ideas</h1>
@@ -230,6 +234,7 @@ export default function IdeaReview({ ideas, dispatch, onGenerateDeck, onBack, br
           onClose={() => setShowExportModal(false)}
         />
       )}
+      </div>
     </div>
   );
 }

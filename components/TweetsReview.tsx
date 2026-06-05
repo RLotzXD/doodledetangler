@@ -4,6 +4,7 @@ import { useState, useRef } from 'react';
 import { Tweet, AppAction } from '@/lib/types';
 import { generateTweetsPrompt } from '@/lib/export';
 import ExportPromptModal from './ExportPromptModal';
+import SessionUrlBanner from './SessionUrlBanner';
 
 interface Props {
   tweets: Tweet[];
@@ -11,9 +12,10 @@ interface Props {
   onBack: () => void;
   briefText?: string;
   notesText?: string;
+  sessionUrl?: string | null;
 }
 
-export default function TweetsReview({ tweets, dispatch, onBack, briefText = '', notesText = '' }: Props) {
+export default function TweetsReview({ tweets, dispatch, onBack, briefText = '', notesText = '', sessionUrl = null }: Props) {
   const [newTweet, setNewTweet] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
@@ -92,7 +94,9 @@ export default function TweetsReview({ tweets, dispatch, onBack, briefText = '',
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-6">
+    <div>
+      {sessionUrl && <SessionUrlBanner url={sessionUrl} />}
+      <div className="max-w-3xl mx-auto p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-lg font-bold">Review Tweets</h1>
@@ -240,6 +244,7 @@ export default function TweetsReview({ tweets, dispatch, onBack, briefText = '',
           onClose={() => setShowExportModal(false)}
         />
       )}
+      </div>
     </div>
   );
 }

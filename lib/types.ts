@@ -61,6 +61,7 @@ export interface AppState {
   detectedBrief: string | null;
   currentSlide: number;
   viewMode: 'scroll' | 'horizontal';
+  sessionUrl: string | null;
 }
 
 export type AppAction =
@@ -93,4 +94,5 @@ export type AppAction =
   | { type: 'ACCEPT_DETECTED_BRIEF' }
   | { type: 'SET_CURRENT_SLIDE'; index: number }
   | { type: 'SET_VIEW_MODE'; mode: 'scroll' | 'horizontal' }
-  | { type: 'LOAD_DECK'; deck: SavedDeck };
+  | { type: 'LOAD_DECK'; deck: SavedDeck }
+  | { type: 'SET_SESSION_URL'; url: string | null };
