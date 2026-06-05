@@ -8,57 +8,52 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing sessionUrl' }, { status: 400 });
     }
 
-    const webhookUrl = process.env.TEAMS_WEBHOOK_URL;
-    if (!webhookUrl) {
-      return NextResponse.json({ error: 'Teams webhook not configured' }, { status: 400 });
+    const resendApiKey = process.env.RESEND_API_KEY;
+    const recipientEmail = 'regner.lotz@vml.com';
+
+    if (!resendApiKey) {
+      return NextResponse.json({ error: 'Resend API key not configured' }, { status: 400 });
     }
 
-    const title = hasIdeas ? '💡 Ideas Ready' : hasTweets ? '🐦 Tweets Ready' : 'Session Ready';
-    const message = {
-      '@type': 'MessageCard',
-      '@context': 'https://schema.org/extensions',
-      themeColor: '0078D4',
-      summary: title,
-      sections: [
-        {
-          activityTitle: title,
-          activitySubtitle: 'Your DoodleDetangler session is ready',
-          text: 'Click the button below to view and edit your results on desktop.',
-          potentialAction: [
-            {
-              '@type': 'OpenUri',
-              name: 'Open Results',
-              targets: [
-                {
-                  os: 'default',
-                  uri: sessionUrl,
-                },
-              ],
-            },
-          ],
-        },
-      ],
-    };
+    const subject = hasIdeas ? '💡 Your Ideas are Ready' : hasTweets ? '🐦 Your Tweets are Ready' : '✓ Your Session is Ready';
+    const htmlContent = `
+      <h2>${subject}</h2>
+      <p>Your DoodleDetangler session is ready! Click the link below to view and edit your results:</p>
+      <p><a href="${sessionUrl}" style="display: inline-block; padding: 10px 20px; background-color: #0078D4; color: white; text-decoration: none; border-radius: 4px;">View Results</a></p>
+      <p><strong>Or copy this link:</strong><br>${sessionUrl}</p>
+      ${hasIdeas ? '<p>✓ Ideas extracted and ready for review</p>' : ''}
+      ${hasTweets ? '<p>✓ Tweets generated and ready for editing</p>' : ''}
+    `;
 
-    const response = await fetch(webhookUrl, {
+    const response = await fetch('https://api.resend.com/emails', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(message),
+      headers: {
+        'Authorization': `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: 'onboarding@resend.dev',
+        to: recipientEmail,
+        subject: subject,
+        html: htmlContent,
+      }),
     });
 
     if (!response.ok) {
+      const error = await response.json();
       return NextResponse.json(
-        { error: `Teams webhook failed: ${response.status}` },
+        { error: `Resend failed: ${error.message}` },
         { status: response.status }
       );
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Failed to send Teams notification:', error);
+    console.error('Failed to send email notification:', error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
 }
+
