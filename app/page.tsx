@@ -257,7 +257,7 @@ export default function Home() {
       }
 
       const ideas: Idea[] = payload.ideas.map(
-        (idea: { headline: string; subheader: string; insight: string; mechanic: string; userJourney: string; score: number; reasoning: string }) => ({
+        (idea: { headline: string; subheader: string; insight?: string; mechanic?: string; userJourney?: string; score: number; reasoning: string }) => ({
           id: `ai-${++idCounter}`,
           headline: idea.headline,
           subheader: idea.subheader,
