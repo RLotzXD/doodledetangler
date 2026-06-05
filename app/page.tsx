@@ -3,7 +3,7 @@
 import { useReducer, useCallback, useEffect, useState } from 'react';
 import { AppState, AppAction, Idea, Tweet, SavedDeck } from '@/lib/types';
 import { getTemplate } from '@/lib/templates';
-import { encodeSessionData, decodeSessionData, getSessionUrl, sendToTeams } from '@/lib/session';
+import { encodeSessionData, decodeSessionData, getSessionUrl } from '@/lib/session';
 import InputForm from '@/components/InputForm';
 import ProcessingOverlay from '@/components/ProcessingOverlay';
 import IdeaReview from '@/components/IdeaReview';
@@ -337,7 +337,11 @@ export default function Home() {
       const sessionData = encodeSessionData(ideas, state.tweets, state.briefText, state.notesText);
       const sessionUrl = getSessionUrl(sessionData);
       dispatch({ type: 'SET_SESSION_URL', url: sessionUrl });
-      await sendToTeams(sessionUrl, true, state.tweets.length > 0);
+      await fetch('/api/send-teams-notification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionUrl, hasIdeas: true, hasTweets: state.tweets.length > 0 }),
+      }).catch(err => console.error('Failed to send Teams notification:', err));
     } catch (err) {
       dispatch({
         type: 'SET_ERROR',
@@ -418,7 +422,11 @@ export default function Home() {
       const sessionData = encodeSessionData(state.ideas, tweets, state.briefText, state.notesText);
       const sessionUrl = getSessionUrl(sessionData);
       dispatch({ type: 'SET_SESSION_URL', url: sessionUrl });
-      await sendToTeams(sessionUrl, state.ideas.length > 0, true);
+      await fetch('/api/send-teams-notification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionUrl, hasIdeas: state.ideas.length > 0, hasTweets: true }),
+      }).catch(err => console.error('Failed to send Teams notification:', err));
     } catch (err) {
       dispatch({
         type: 'SET_ERROR',
