@@ -21,7 +21,7 @@ export function decodeSessionData(encoded: string) {
 
 export function getSessionUrl(sessionData: string): string {
   if (typeof window === 'undefined') return '';
-  return `${window.location.origin}?session=${sessionData}`;
+  return `${window.location.origin}?session=${encodeURIComponent(sessionData)}`;
 }
 
 export async function sendToTeams(sessionUrl: string, hasIdeas: boolean, hasTweets: boolean) {
