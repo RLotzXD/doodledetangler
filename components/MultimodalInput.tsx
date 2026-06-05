@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { AppAction } from '@/lib/types';
 
 interface Props {
@@ -10,6 +10,8 @@ interface Props {
 }
 
 export default function MultimodalInput({ files, notesText, dispatch }: Props) {
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
@@ -23,6 +25,21 @@ export default function MultimodalInput({ files, notesText, dispatch }: Props) {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const selected = Array.from(e.target.files || []);
       if (selected.length) dispatch({ type: 'ADD_FILES', files: selected });
+      e.target.value = '';
+    },
+    [dispatch]
+  );
+
+  const handleCameraCapture = useCallback(() => {
+    cameraInputRef.current?.click();
+  }, []);
+
+  const handleCameraFileSelect = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file) {
+        dispatch({ type: 'ADD_FILES', files: [file] });
+      }
       e.target.value = '';
     },
     [dispatch]
@@ -53,6 +70,22 @@ export default function MultimodalInput({ files, notesText, dispatch }: Props) {
           className="hidden"
         />
       </div>
+
+      <button
+        onClick={handleCameraCapture}
+        className="w-full mt-2 py-2 text-sm border border-[var(--foreground)] hover:bg-[var(--foreground)] hover:text-[var(--background)] transition-colors"
+      >
+        📷 Take Photo
+      </button>
+
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleCameraFileSelect}
+        className="hidden"
+      />
 
       {files.length > 0 && (
         <div className="mt-2 space-y-1">
