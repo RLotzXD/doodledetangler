@@ -337,11 +337,6 @@ export default function Home() {
       const sessionData = encodeSessionData(ideas, state.tweets, state.briefText, state.notesText);
       const sessionUrl = getSessionUrl(sessionData);
       dispatch({ type: 'SET_SESSION_URL', url: sessionUrl });
-      await fetch('/api/send-teams-notification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionUrl, hasIdeas: true, hasTweets: state.tweets.length > 0 }),
-      }).catch(err => console.error('Failed to send Teams notification:', err));
     } catch (err) {
       dispatch({
         type: 'SET_ERROR',
@@ -422,11 +417,6 @@ export default function Home() {
       const sessionData = encodeSessionData(state.ideas, tweets, state.briefText, state.notesText);
       const sessionUrl = getSessionUrl(sessionData);
       dispatch({ type: 'SET_SESSION_URL', url: sessionUrl });
-      await fetch('/api/send-teams-notification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionUrl, hasIdeas: state.ideas.length > 0, hasTweets: true }),
-      }).catch(err => console.error('Failed to send Teams notification:', err));
     } catch (err) {
       dispatch({
         type: 'SET_ERROR',
